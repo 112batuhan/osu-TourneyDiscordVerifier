@@ -5,14 +5,18 @@ class Sheet:
 
     def __init__(self,json_path):
 
+        self.json_path = json_path
+        
+    def authhorise(self):
         scope = ['https://spreadsheets.google.com/feeds',
                 'https://www.googleapis.com/auth/drive']
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(json_path, scope)
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(self.json_path, scope)
         self.gs = gspread.authorize(credentials)
 
 
     def update_player(self, player_name, discord_tag, sheet_id, worksheet_name, player_range, discord_name_range, verify_range):
 
+        self.authhorise()
         current_work_sheet = self.gs.open_by_key(sheet_id).worksheet(worksheet_name)
 
         player_names = current_work_sheet.range(player_range)
@@ -31,6 +35,7 @@ class Sheet:
 
     def get_player_list(self, sheet_id, worksheet_name, player_range, discord_name_range, verify_range):
 
+        self.authhorise()
         current_work_sheet = self.gs.open_by_key(sheet_id).worksheet(worksheet_name)
 
         player_names = current_work_sheet.range(player_range)
@@ -49,6 +54,8 @@ class Sheet:
     #a bit too hardcoded but whatever
     def set_qualifier_settings(self, sheet_id, worksheet_name, player_range, room_name_range, referee_range, day_range, time_range, match_link_range):
 
+        self.authhorise()
+
         self.player_range = player_range
         self.room_name_range = room_name_range
         self.referee_range = referee_range
@@ -59,6 +66,8 @@ class Sheet:
         self.current_work_sheet = self.gs.open_by_key(sheet_id).worksheet(worksheet_name)
 
     def create_room(self, room_id, day_setting, time_setting):
+
+        self.authhorise()
 
         room_names = self.current_work_sheet.range(self.room_name_range)
         days = self.current_work_sheet.range(self.day_range)
@@ -76,6 +85,8 @@ class Sheet:
                 break
 
     def delete_room(self, room_id):
+
+        self.authhorise()
 
         room_names = self.current_work_sheet.range(self.room_name_range)
         days = self.current_work_sheet.range(self.day_range)
@@ -104,6 +115,8 @@ class Sheet:
     
     def add_referee(self, room_id, referee_setting):
 
+        self.authhorise()
+
         room_names = self.current_work_sheet.range(self.room_name_range)
         referees = self.current_work_sheet.range(self.referee_range)
 
@@ -116,6 +129,8 @@ class Sheet:
                 break
 
     def remove_referee(self, room_id):
+
+        self.authhorise()
 
         room_names = self.current_work_sheet.range(self.room_name_range)
         referees = self.current_work_sheet.range(self.referee_range)
@@ -130,6 +145,8 @@ class Sheet:
 
     def add_mp_link(self, room_id, mp_link_setting):
 
+        self.authhorise()
+
         room_names = self.current_work_sheet.range(self.room_name_range)
         mp_links =  self.current_work_sheet.range(self.match_link_range)
 
@@ -142,6 +159,8 @@ class Sheet:
                 break
 
     def update_players(self, room_id, player_list):
+
+        self.authhorise()
 
         player_list = player_list + (16-len(player_list))*[""]
 
