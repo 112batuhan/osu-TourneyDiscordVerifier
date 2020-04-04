@@ -31,3 +31,15 @@ class Sheet:
                 return
 
         raise KeyError("Searched player could not find.")
+
+    def get_player_list(self):
+
+        player_list = []
+        for player_cell, discord_cell, verify_cell in zip(self.player_names, self.discord_names, self.verify):
+
+            if verify_cell.value == "TRUE":
+
+                player_list.append([player_cell.value, discord_cell.value])
+
+        return player_list
+
