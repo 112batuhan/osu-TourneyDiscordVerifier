@@ -14,7 +14,7 @@ class Misc(commands.Cog):
     @commands.command(name="ping")
     async def ping_player(self, ctx, player_name):
         """
-        pings a player with their in game name.
+        Pings a player with their in game name.
 
         player_name: In game name of the player.
         """

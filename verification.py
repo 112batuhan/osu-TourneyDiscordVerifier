@@ -20,9 +20,8 @@ class Verification(commands.Cog):
         Adds verified players into the database from sheet
         """
 
-        sheet_info = db.table("guilds").get(Query().guild_id == ctx.guild.id)
-        sheet.set_current_sheet_data(sheet_info["sheet_id"], sheet_info["worksheet_name"], sheet_info["player_range"], sheet_info["discord_name_range"], sheet_info["verify_range"])
-        verified_player_data = sheet.get_player_list()
+        server_info = db.table("guilds").get(Query().guild_id == ctx.guild.id)
+        verified_player_data = sheet.get_player_list(**server_info["verification_sheet_settings"])
 
         none_list = []
 
@@ -56,9 +55,8 @@ class Verification(commands.Cog):
         
         try:
 
-            sheet_info = db.table("guilds").get(Query().guild_id == ctx.guild.id)
-            sheet.set_current_sheet_data(sheet_info["sheet_id"], sheet_info["worksheet_name"], sheet_info["player_range"], sheet_info["discord_name_range"], sheet_info["verify_range"])
-            sheet.update_player(player_name, str(discord_user))
+            server_info = db.table("guilds").get(Query().guild_id == ctx.guild.id)
+            sheet.update_player(player_name, str(discord_user), **server_info["verification_sheet_settings"])
 
             things_to_upsert = {"player_name":player_name, "player_discord_id": ctx.author.id, "guild_id": ctx.guild.id}
             db.table("players").upsert(things_to_upsert , (Query().player_discord_id == ctx.author.id) & (Query().guild_id == ctx.guild.id))
