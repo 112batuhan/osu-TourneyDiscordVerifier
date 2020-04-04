@@ -42,4 +42,3 @@ class Sheet:
                 player_list.append([player_cell.value, discord_cell.value])
 
         return player_list
-
