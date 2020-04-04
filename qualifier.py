@@ -40,7 +40,7 @@ class Qualifier(commands.Cog):
                 await ctx.send(f"There is already a room with the same id.")
             else:
                 sheet.create_room(room_id, day, time)
-                things_to_insert = {"room_id":room_id, "guild_id": ctx.guild.id, "players":[], "day":day, "time":time, "referee":None, "mp_link":None}
+                things_to_insert = {"room_id":room_id, "guild_id": ctx.guild.id, "players":[], "day":day, "time":time, "referee":"", "mp_link":""}
                 db.table("qualifier").insert(things_to_insert)
                 await ctx.send(f"Qualifier room `{room_id}` successfully added.")
 
@@ -158,22 +158,35 @@ class Qualifier(commands.Cog):
 
     
     #change into paged embed maybe
-    @commands.command(name="qualifierRooms")
-    async def show_rooms(self, ctx):
+    @commands.command(name="rooms")
+    async def show_rooms(self, ctx, room_id=""):
         """
         Shows the qualifier rooms.
         """
         
-        rooms = db.table("qualifier").search(Query().guild_id == ctx.guild.id)
+        if room_id != "":
+            room = db.table("qualifier").get((Query().room_id == room_id) & (Query().guild_id == ctx.guild.id))
+            if room != None:
+                desc_text = ""
+                for player in room["players"]:
+                    player_data = db.table("players").get((Query().player_name == player) & (Query().guild_id == ctx.guild.id))
+                    
+                    desc_text += f"**{player}** - <@{player_data['player_discord_id']}>\n"
+                
+                embeded = discord.Embed(title = f"**{room['room_id']}** - `{room['day']} {room['time']}` - {room['referee']}" , description=desc_text)
 
-        desc_text = ""
+            else:
+                await ctx.send(f"No room named {room_id}")
+        
 
-        for room in rooms:
-            player_String = ", ".join(room["players"])
-            room_name = room["room_id"]
-            desc_text += f"`{room_name}` - {player_String}\n"
+        else:
+            rooms = db.table("qualifier").search(Query().guild_id == ctx.guild.id)
+            desc_text = "Name-Day-Time-Referee\n"
+            for room in rooms:
+            
+                desc_text += f"**{room['room_id']}** - `{room['day']} {room['time']}` - {room['referee']}\n"
 
-        embeded = discord.Embed(title = "Qualifier Rooms", description=desc_text)
+            embeded = discord.Embed(title = "Qualifier Rooms", description=desc_text)
         await ctx.send(embed=embeded)
 
 
