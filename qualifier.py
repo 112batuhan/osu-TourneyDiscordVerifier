@@ -27,7 +27,7 @@ class Qualifier(commands.Cog):
         qualifier_settings = db.table("guilds").get(Query().guild_id == ctx.guild.id)["qualifier_sheet_settings"]
             
         if qualifier_settings != None:
-            sheet.set_qualifier_settings(**qualifier_settings)
+            pass
         else:
             await ctx.send(f"Qualifier sheet settings unknown. Use `&setQualifierSheet` command first.")
             return
@@ -39,7 +39,7 @@ class Qualifier(commands.Cog):
             if db.table("qualifier").contains(current_query):
                 await ctx.send(f"There is already a room with the same id.")
             else:
-                sheet.create_room(room_id, day, time)
+                
                 things_to_insert = {"room_id":room_id, "guild_id": ctx.guild.id, "players":[], "day":day, "time":time, "referee":"", "mp_link":""}
                 db.table("qualifier").insert(things_to_insert)
                 await ctx.send(f"Qualifier room `{room_id}` successfully added.")
@@ -48,7 +48,7 @@ class Qualifier(commands.Cog):
 
             if db.table("qualifier").contains(current_query):
                 
-                sheet.delete_room(room_id)
+                
                 db.table("qualifier").remove(current_query)
                 await ctx.send(f"Qualifier room `{room_id}` successfully deleted.")
 
@@ -64,9 +64,6 @@ class Qualifier(commands.Cog):
         action: join or leave
         room_id: Name of the room when joining.
         """
-
-        qualifier_settings = db.table("guilds").get(Query().guild_id == ctx.guild.id)["qualifier_sheet_settings"]
-        sheet.set_qualifier_settings(**qualifier_settings)
 
         current_player = db.table("players").get(Query().player_discord_id == ctx.author.id)
         if current_player == None:#rewrite the table.get functions into this, i wasn't aware that i could do this.
@@ -98,8 +95,6 @@ class Qualifier(commands.Cog):
 
             new_room["players"].append(current_player["player_name"])
 
-            sheet.update_players(room_id ,new_room["players"])
-
             db.table("qualifier").update({"players":new_room["players"]},Query().room_id == room_id)
             await ctx.send(f"Player successfull added to room {room_id}")
 
@@ -109,7 +104,7 @@ class Qualifier(commands.Cog):
 
                 old_room = db.table("qualifier").get(old_room_query)
                 old_room["players"].remove(current_player["player_name"])
-                sheet.update_players(old_room["room_id"] ,old_room["players"])
+                
                 db.table("qualifier").update({"players":old_room["players"]},old_room_query)
                 await ctx.send("Player Successfully removed.")
             else:
@@ -122,19 +117,17 @@ class Qualifier(commands.Cog):
         """
         A command for referees to take rooms.
         """
-        qualifier_settings = db.table("guilds").get(Query().guild_id == ctx.guild.id)["qualifier_sheet_settings"]
-        sheet.set_qualifier_settings(**qualifier_settings)
 
         room = db.table("qualifier").get(Query().room_id == room_id)
 
         if room == None:
             await ctx.send(f"Qualifier room could not find.")  
         elif room["referee"] == ctx.author.name:
-            sheet.remove_referee(room_id)
+            
             db.table("qualifier").update({"referee":None}, Query().room_id == room_id)
             await ctx.send(f"You are removed from room {room_id} as a referee")     
         else:
-            sheet.add_referee(room_id, ctx.author.name)
+            
             db.table("qualifier").update({"referee":ctx.author.name}, Query().room_id == room_id)
             await ctx.send(f"You joined to room {room_id} as referee")    
 
@@ -144,15 +137,13 @@ class Qualifier(commands.Cog):
         """
         Adds multiplayer match link to the room.
         """
-        qualifier_settings = db.table("guilds").get(Query().guild_id == ctx.guild.id)["qualifier_sheet_settings"]
-        sheet.set_qualifier_settings(**qualifier_settings)
 
         room = db.table("qualifier").get(Query().room_id == room_id)
         
         if room == None:
             await ctx.send(f"Qualifier room could not find.")
         else:
-            sheet.add_mp_link(room_id, mp_link)
+            
             db.table("qualifier").update({"mp_link":mp_link}, Query().room_id == room_id)
             await ctx.send(f"MP Link added.")
 
@@ -162,10 +153,15 @@ class Qualifier(commands.Cog):
     async def show_rooms(self, ctx, room_id=""):
         """
         Shows the qualifier rooms.
+        
+        Either room name for showing a spesific lobby, or day to show lobbies in that day.
         """
         
-        if room_id != "":
+        days = ["Senin" , "Selasa" , "Rabu" , "Kamis" , "Jumat" , "Sabtu" , "Minggu"]
+
+        if room_id not in days:
             room = db.table("qualifier").get((Query().room_id == room_id) & (Query().guild_id == ctx.guild.id))
+            print(room)
             if room != None:
                 desc_text = ""
                 for player in room["players"]:
@@ -179,8 +175,9 @@ class Qualifier(commands.Cog):
                 await ctx.send(f"No room named {room_id}")
         
 
-        else:
-            rooms = db.table("qualifier").search(Query().guild_id == ctx.guild.id)
+        elif room_id in days:
+
+            rooms = db.table("qualifier").search((Query().guild_id == ctx.guild.id) & (Query().day == room_id))
             desc_text = "Name-Day-Time-Referee\n"
             for room in rooms:
             
@@ -188,6 +185,82 @@ class Qualifier(commands.Cog):
 
             embeded = discord.Embed(title = "Qualifier Rooms", description=desc_text)
         await ctx.send(embed=embeded)
+
+
+    @commands.command(name="bulkAdd")
+    @commands.has_permissions(administrator=True)
+    async def bulk_add(self, ctx, day ):
+        time = 7
+        
+        table = db.table("qualifier")
+        last_lobby_number = int(table.get(doc_id=len(table))["room_id"].split(" ")[1])
+        
+        for i in range(17):
+            
+            time = (time + 1)%24
+            hour = str(time)
+            if len(hour) < 1:
+                hour = "0"+hour
+            
+            things_to_insert = {"room_id":f"Lobby {last_lobby_number+i+1}", "guild_id": ctx.guild.id, "players":[], "day":day, "time":hour+":00", "referee":"", "mp_link":""}
+            table.insert(things_to_insert)
+        
+        await ctx.send(f"Lobbies in {day} has been added")
+
+    @commands.command(name="bulkDelete")
+    @commands.has_permissions(administrator=True)
+    async def bulk_delete(self, ctx, day ):
+        
+        db.table("qualifier").remove(Query().day == day)
+        await ctx.send(f"Lobbies in {day} has been deleted")
+
+    @commands.command(name="forceAdd")
+    @commands.has_permissions(administrator=True)
+    async def add_player_by_force(self, ctx, room_id, player_name):
+
+        if room_id == "":
+            await ctx.send("no room specified")
+            return
+
+        if db.table("qualifier").contains(Query().players.any(player_name)):
+            await ctx.send(f"{player_name} is already in a room. To change rooms, use `&forceRemove {player_name}` command first.")
+            return
+
+        if not db.table("qualifier").contains(Query().room_id == room_id):
+            await ctx.send(f"There is no room called `{room_id}`")
+            return
+
+        if not db.table("players").contains(Query().player_name == player_name):
+            await ctx.send(f"There is no player called `{player_name}`")
+            return
+
+        new_room = db.table("qualifier").get(Query().room_id == room_id)
+            
+        qualifier_room_size = 16
+        if len(new_room["players"]) >= qualifier_room_size:
+            await ctx.send("This room is full.")
+            return
+
+        new_room["players"].append(player_name)
+
+        db.table("qualifier").update({"players":new_room["players"]},Query().room_id == room_id)
+        await ctx.send(f"Player successfull added to room {room_id}")
+        
+    @commands.command(name="forceRemove")
+    @commands.has_permissions(administrator=True)
+    async def remove_player_by_force(self, ctx, player_name):
+        
+        old_room_query = Query().players.any(player_name)
+
+        if db.table("qualifier").contains(old_room_query):
+
+            old_room = db.table("qualifier").get(old_room_query)
+            old_room["players"].remove(player_name)
+                
+            db.table("qualifier").update({"players":old_room["players"]},old_room_query)
+            await ctx.send("Player Successfully removed.")
+        else:
+            await ctx.send("You aren't in any room. Use `&qualifier join` command.")
 
 
 def setup(bot):
